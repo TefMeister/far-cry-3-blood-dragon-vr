@@ -1,6 +1,8 @@
 # Research index
 
-**Last `/gr` pass: 2026-09-17 (estate sweep) — CHECK-IN.** First pass: folder bootstrapped; one topic on the DX9-only HeliX 3D Vision fix as a reference for the shader-constant comparison with Far Cry 2.
+**Last `/gr` pass: 2026-09-23 (estate sweep) — CHECK-IN.** Checked phunkaeg's *VR Modding Playbook*: no Blood Dragon entry; the Far Cry 2 chapter (Dunia camera as a global, per-build offset tables) is the transferable part, indexed in far-cry-2-vr.
+
+_Previous: **Last `/gr` pass: 2026-09-17 (estate sweep) — CHECK-IN.** First pass: folder bootstrapped; one topic on the DX9-only HeliX 3D Vision fix as a reference for the shader-constant comparison with Far Cry 2._
 
 Every research topic gathered for this project, newest first. Each row links to a self-contained
 write-up in `topics/`. Status tags:
