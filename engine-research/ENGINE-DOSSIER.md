@@ -38,6 +38,14 @@
 - Exact constant-buffer slot, parameter name(s), byte offset(s), layout,
   handedness, row/column convention:
 - Where projection `P` / FOV comes from:
+- **Compared with Far Cry 2 (2026-09-28, `/pd`):** both renderer DLLs (`FC3.dll` D3D9, `FC3_d3d11.dll` D3D11, 32-bit)
+  carry Far Cry 2's shader-parameter names — `ViewMatrix`, `InvViewMatrix`, `ViewProjectionMatrix`, `ModelViewProj`,
+  `CameraPositionFractions` and others — plus previous-frame matrices for motion blur `[inferred-static 2026-09-28]`.
+  On Far Cry 2 the view sits at `c12–c15` (inverse `c36–c39`, projection `c16–c19`); here parameters are bound by name,
+  so registers must be measured, not assumed. Shaders compile at run time from sources in `common.dat` (the
+  `obj11` cache holds only an index, written 2026-09-15 18:53, so the D3D11 build has run once on the dev PC).
+  Script-style camera-offset functions exist (`EnableCameraOffset`, `SetEffectiveCameraPositionOffset`, …)
+  — a possible per-eye lever `[hypothesis]`. Detail: `dev-archive/recon/2026-09-28-camera-names-vs-far-cry-2/`.
 - The per-eye override maths (`K_eye = …`):
 
 ## 7. Constant-buffer fill mechanism
