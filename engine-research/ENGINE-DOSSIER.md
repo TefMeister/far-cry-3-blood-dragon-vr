@@ -46,6 +46,16 @@
   `obj11` cache holds only an index, written 2026-09-15 18:53, so the D3D11 build has run once on the dev PC).
   Script-style camera-offset functions exist (`EnableCameraOffset`, `SetEffectiveCameraPositionOffset`, …)
   — a possible per-eye lever `[hypothesis]`. Detail: `dev-archive/recon/2026-09-28-camera-names-vs-far-cry-2/`.
+- **Measuring the registers (2026-09-30):** `dev-archive/proxy-d3d9/` is a read-only `d3d9.dll` that logs
+  every vertex shader's `name -> register` pairs from its constant table at creation, plus first-write
+  snapshots. Reader tested 26/26 on `fxc`-compiled shaders `[verified-numerically 2026-09-30]`; the DLL
+  exports exactly `Direct3DCreate9` `[compile-verified 2026-09-30]`. Not yet run.
+- **A native camera-position offset (2026-09-30):** the camera-offset names are Lua bindings. Under
+  `SetEffectiveCameraPositionOffset` the game reaches the player's camera controller through the entity
+  manager at `[0x11843740]` and copies an x/y/z vector to **controller `+0x98`**; the script path can be
+  refused by a condition, a direct write would not `[inferred-static 2026-09-30]`. Space (world or
+  camera) and per-frame behaviour unknown. `SetPlayerLookAngles` and `SetPlayerFOV` sit in the same
+  table. Detail: `dev-archive/recon/2026-09-30-camera-offset-lua-api/`.
 - The per-eye override maths (`K_eye = …`):
 
 ## 7. Constant-buffer fill mechanism
