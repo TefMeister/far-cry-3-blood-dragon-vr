@@ -1,6 +1,8 @@
 # Research index
 
-**Last `/gr` pass: 2026-09-29 (estate sweep) — CHECK-IN.** Inbox empty; the two `[PD]` rows are internal (shader-constant logger, camera-offset callers) and the HeliX topic already covers the public side. Nothing new.
+**Last `/gr` pass: 2026-10-04 (estate sweep, second pass) — CHECK-IN.** Inbox empty; board `OPEN` rows read: first launch and our logger run, both FLAT. Nothing new.
+
+_Previous: **Last `/gr` pass: 2026-09-29 (estate sweep) — CHECK-IN.** Inbox empty; the two `[PD]` rows are internal (shader-constant logger, camera-offset callers) and the HeliX topic already covers the public side. Nothing new._
 
 _Previous: **Last `/gr` pass: 2026-09-23 (estate sweep) — CHECK-IN.** Checked phunkaeg's *VR Modding Playbook*: no Blood Dragon entry; the Far Cry 2 chapter (Dunia camera as a global, per-build offset tables) is the transferable part, indexed in far-cry-2-vr.
 
