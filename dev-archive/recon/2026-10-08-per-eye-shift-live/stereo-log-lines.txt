@@ -1,0 +1,25 @@
+[114265312] stereo: off (numpad 5 on/off, 4/6 separation, 8 mode); separation 0.065, mode alternate
+[114513625] stereo: ON
+[114518531] stereo: 290 frames; shifted c0 15209, c4 15209, c12 15209, c32 15209; other cameras left alone 0
+[114523531] stereo: 286 frames; shifted c0 13276, c4 13276, c12 13276, c32 13276; other cameras left alone 0
+[114528531] stereo: 297 frames; shifted c0 14054, c4 14054, c12 14054, c32 14054; other cameras left alone 0
+[114533531] stereo: 287 frames; shifted c0 13621, c4 13621, c12 13621, c32 13621; other cameras left alone 804
+[114535046] stereo: mode left only
+[114536562] stereo: mode right only
+[114538531] stereo: 292 frames; shifted c0 12296, c4 12296, c12 12296, c32 12296; other cameras left alone 1168
+[114543531] stereo: 300 frames; shifted c0 12600, c4 12600, c12 12600, c32 12600; other cameras left alone 1200
+[114548531] stereo: 296 frames; shifted c0 12432, c4 12432, c12 12432, c32 12432; other cameras left alone 1184
+[114553531] stereo: 251 frames; shifted c0 8714, c4 8714, c12 8714, c32 8714; other cameras left alone 3054
+[114558531] stereo: 254 frames; shifted c0 9689, c4 9689, c12 9689, c32 9689; other cameras left alone 4128
+[114563531] stereo: 299 frames; shifted c0 12436, c4 12436, c12 12436, c32 12436; other cameras left alone 2392
+[114568531] stereo: 299 frames; shifted c0 12345, c4 12345, c12 12345, c32 12345; other cameras left alone 2392
+[114573531] stereo: 299 frames; shifted c0 12259, c4 12259, c12 12259, c32 12259; other cameras left alone 2392
+[114578546] stereo: 300 frames; shifted c0 12292, c4 12292, c12 12292, c32 12292; other cameras left alone 2400
+[114583546] stereo: 300 frames; shifted c0 12300, c4 12300, c12 12300, c32 12300; other cameras left alone 2400
+[114588546] stereo: 299 frames; shifted c0 12259, c4 12259, c12 12259, c32 12259; other cameras left alone 2392
+[114593265] stereo: mode alternate
+[114593546] stereo: 299 frames; shifted c0 12259, c4 12259, c12 12259, c32 12259; other cameras left alone 2392
+[114594859] stereo: mode left only
+[114596500] stereo: mode right only
+[114598109] stereo: off
+[114598546] stereo: 296 frames; shifted c0 11065, c4 11065, c12 11065, c32 11065; other cameras left alone 2160
