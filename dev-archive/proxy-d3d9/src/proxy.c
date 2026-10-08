@@ -22,6 +22,7 @@
 #include "MinHook.h"
 #include "ctab.h"
 #include "settings.h"
+#include "stereo.h"
 
 /* ---------------- log ---------------- */
 
@@ -294,6 +295,7 @@ static int hook(void *target, void *detour, void **orig, const char *name) {
 static HRESULT WINAPI h_Present(void *dev, const RECT *a, const RECT *b, HWND w, const void *r) {
     EnterCriticalSection(&g_cs);
     frame_boundary();
+    stereo_on_present();
     LeaveCriticalSection(&g_cs);
     return o_Present(dev, a, b, w, r);
 }
@@ -314,12 +316,15 @@ static HRESULT WINAPI h_SetVS(void *dev, void *vs) {
 }
 
 static HRESULT WINAPI h_SetVSConstF(void *dev, UINT start, const float *data, UINT count) {
+    static float scratch[STEREO_MAX_REGS * 4];   /* render thread only */
     if (g_snapping || g_ct_on) {
         EnterCriticalSection(&g_cs);
         if (g_snapping) snap_constants(start, data, count);
         if (g_ct_on) camtrace_constants(start, data, count);
         LeaveCriticalSection(&g_cs);
     }
+    /* After the loggers, so a snapshot shows what the GAME sent; the per-eye shift is applied on the way out. */
+    data = stereo_filter(start, data, count, scratch);
     return o_SetVSConstF(dev, start, data, count);
 }
 
@@ -373,8 +378,9 @@ BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID reserved) {
         DisableThreadLibraryCalls(inst);
         InitializeCriticalSection(&g_cs);
         log_open();
-        logf_("Blood Dragon d3d9 camera logger attached (pid %lu); read-only, nothing is changed",
+        logf_("Blood Dragon d3d9 camera logger attached (pid %lu); it changes nothing unless the per-eye shift is on",
               (unsigned long)GetCurrentProcessId());
+        stereo_init(g_dir, logf_);
         GetSystemDirectoryA(sys, MAX_PATH);
         lstrcatA(sys, "\\d3d9.dll");
         real = LoadLibraryA(sys);

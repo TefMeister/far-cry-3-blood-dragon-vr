@@ -32,6 +32,21 @@
 #define CAMTRACE_REG_COUNT          6
 #define CAMTRACE_REGS               { 0, 4, 8, 12, 16, 32 }
 
+/* Per-eye shift (stereo.c, 2026-10-08). Registers measured 2026-10-08 (dossier §6). Dunia units are about metres
+ * (Far Cry 2), so the default separation is a real eye distance. */
+#define STEREO_ON_FILE              "fc3bd_vr_stereo_on.txt"
+#define STEREO_SEP_DEFAULT          0.065f
+#define STEREO_SEP_STEP             0.005f
+#define STEREO_SEP_MAX              0.5f
+#define STEREO_STATS_MS             5000u
+#define STEREO_MAX_REGS             256u
+#define STEREO_ASPECT_MIN           1.2f    /* the player's lens is 16:9 (1.778); the sun's is square (1.0) */
+#define STEREO_ASPECT_MAX           2.5f
+#define STEREO_REG_VP_REL           0u      /* c0-c3: view-projection, no translation (camera-relative) */
+#define STEREO_REG_VP               4u      /* c4-c7: view-projection with translation */
+#define STEREO_REG_VIEW             12u     /* c12-c15: view */
+#define STEREO_REG_INV_VIEW         32u     /* c32-c35: inverse view */
+
 /* Constant-table bookkeeping. */
 #define SHADER_SLOTS                16384   /* shaders remembered, open addressing */
 #define SHADER_CONSTS_MAX           24      /* named constants kept per shader */
