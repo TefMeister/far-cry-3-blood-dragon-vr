@@ -57,7 +57,19 @@
   refused by a condition, a direct write would not `[inferred-static 2026-09-30]`. Space (world or
   camera) and per-frame behaviour unknown. `SetPlayerLookAngles` and `SetPlayerFOV` sit in the same
   table. Detail: `dev-archive/recon/2026-09-30-camera-offset-lua-api/`.
-- The per-eye override maths (`K_eye = …`):
+- **⭐ MEASURED 2026-10-08 (`/lm`, two launches, camera trace): the view lands at `c12–c15`, as on Far Cry 2.**
+  No shader carries a constant table (413 seen, 0 with one) `[measured 2026-10-08, n=2 launches]`, so the registers
+  were read from values. One frame `[measured 2026-10-08, n=4 traces]`: `c12–c15` view (world → view), `c8–c11`
+  projection (16:9, near 0.1, 46.7° for the world), `c16–c19` inverse projection, `c32–c35` inverse view, `c0–c3`
+  view-projection without translation (camera-relative), `c4–c7` view-projection with translation. c12 takes several
+  values per frame: the sun (shadow cascades, square lenses), the player's view, a pitch-mirrored copy (probably water
+  reflection `[hypothesis]`), and in the helicopter a 39.4° camera (probably the gun `[hypothesis]`). **The player's
+  c12 turns with the mouse: +50.34° for 300 counts, −100.71° for 600** `[measured 2026-10-08, n=2]`. ⚠️ The
+  first-write snapshot catches the SUN camera in open-world frames, not the player's: use the camera trace
+  (`fc3bd_vr_camtrace.txt`). Note: `modding-notes/2026-10-08-lm-the-view-lands-at-c12-like-far-cry-2.md`.
+- The per-eye override maths (`K_eye = …`): a sideways eye shift d in view space is c12 row 0 .w −= d; c0 and c4
+  row 0 .w −= P00·d (P00 = c8 row 0 x); c32 translation += d·right `[inferred-static 2026-10-08]`, applied only to
+  the player's camera (16:9 projection, not the mirrored copy).
 
 ## 7. Constant-buffer fill mechanism
 - Map/DISCARD ring / UpdateSubresource / D3D11.1 offset / **persistent map +

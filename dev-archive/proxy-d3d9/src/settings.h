@@ -23,6 +23,15 @@
 #define SNAP_MAX_LINES              600
 #define SNAP_ARM_FILE               "fc3bd_vr_snap.txt"
 
+/* Camera trace (2026-10-08, /lm): creating this file asks for ONE frame in which every DIFFERENT 4-row block written
+ * at the camera registers below is logged, with the shader that was bound. The first-write snapshot catches the
+ * shadow pass (a sun camera with a square projection) before the player's view, so the view has to be picked out of
+ * all the passes by its 16:9 projection. */
+#define CAMTRACE_ARM_FILE           "fc3bd_vr_camtrace.txt"
+#define CAMTRACE_MAX_LINES          900
+#define CAMTRACE_REG_COUNT          6
+#define CAMTRACE_REGS               { 0, 4, 8, 12, 16, 32 }
+
 /* Constant-table bookkeeping. */
 #define SHADER_SLOTS                16384   /* shaders remembered, open addressing */
 #define SHADER_CONSTS_MAX           24      /* named constants kept per shader */
