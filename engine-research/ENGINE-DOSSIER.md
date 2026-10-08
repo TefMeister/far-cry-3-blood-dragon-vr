@@ -77,6 +77,7 @@
 - The per-eye override maths (`K_eye = …`): a sideways eye shift d in view space is c12 row 0 .w −= d; c0 and c4
   row 0 .w −= P00·d (P00 = c8 row 0 x); c32 translation += d·right `[inferred-static 2026-10-08]`, applied only to
   the player's camera (16:9 projection, not the mirrored copy).
+- **Built 2026-10-08 (`/pd`):** the shift above runs in `dev-archive/proxy-d3d9` (`abd6b4e78deb`, numpad 5, off by default); tested against a camera actually moved sideways, 16,962 checks `[verified-numerically 2026-10-08]`; not run. Note `modding-notes/2026-10-08-pd-the-per-eye-shift.md`.
 
 ## 7. Constant-buffer fill mechanism
 - Map/DISCARD ring / UpdateSubresource / D3D11.1 offset / **persistent map +
