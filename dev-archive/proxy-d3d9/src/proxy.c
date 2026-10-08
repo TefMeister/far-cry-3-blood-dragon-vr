@@ -23,6 +23,7 @@
 #include "ctab.h"
 #include "settings.h"
 #include "stereo.h"
+#include "sbs.h"
 
 /* ---------------- log ---------------- */
 
@@ -272,6 +273,7 @@ static void snap_constants(UINT start, const float *data, UINT count) {
 
 typedef HRESULT(WINAPI *CreateDevice_t)(void *, UINT, DWORD, HWND, DWORD, void *, void **);
 typedef HRESULT(WINAPI *Present_t)(void *, const RECT *, const RECT *, HWND, const void *);
+typedef HRESULT(WINAPI *Reset_t)(void *, void *);
 typedef HRESULT(WINAPI *CreateVS_t)(void *, const DWORD *, void **);
 typedef HRESULT(WINAPI *SetVS_t)(void *, void *);
 typedef HRESULT(WINAPI *SetVSConstF_t)(void *, UINT, const float *, UINT);
@@ -279,6 +281,7 @@ typedef void *(WINAPI *Direct3DCreate9_t)(UINT);
 
 static CreateDevice_t o_CreateDevice;
 static Present_t o_Present;
+static Reset_t o_Reset;
 static CreateVS_t o_CreateVS;
 static SetVS_t o_SetVS;
 static SetVSConstF_t o_SetVSConstF;
@@ -295,9 +298,20 @@ static int hook(void *target, void *detour, void **orig, const char *name) {
 static HRESULT WINAPI h_Present(void *dev, const RECT *a, const RECT *b, HWND w, const void *r) {
     EnterCriticalSection(&g_cs);
     frame_boundary();
+    sbs_on_present(dev, stereo_frame_eye());   /* label with the eye this frame was drawn for, BEFORE the flip */
     stereo_on_present();
     LeaveCriticalSection(&g_cs);
     return o_Present(dev, a, b, w, r);
+}
+
+static HRESULT WINAPI h_Reset(void *dev, void *pp) {
+    HRESULT hr;
+    EnterCriticalSection(&g_cs);
+    sbs_on_reset();   /* default-pool surfaces must be released before a Reset */
+    LeaveCriticalSection(&g_cs);
+    hr = o_Reset(dev, pp);
+    logf_("Reset -> 0x%08lx", (unsigned long)hr);
+    return hr;
 }
 
 static HRESULT WINAPI h_CreateVS(void *dev, const DWORD *fn, void **out) {
@@ -333,6 +347,7 @@ static void hook_device(void *dev) {
     if (g_dev_hooked) return;
     g_dev_hooked = 1;
     hook(vt[VT_DEV_PRESENT], (void *)h_Present, (void **)&o_Present, "Present");
+    hook(vt[VT_DEV_RESET], (void *)h_Reset, (void **)&o_Reset, "Reset");
     hook(vt[VT_DEV_CREATEVERTEXSHADER], (void *)h_CreateVS, (void **)&o_CreateVS, "CreateVertexShader");
     hook(vt[VT_DEV_SETVERTEXSHADER], (void *)h_SetVS, (void **)&o_SetVS, "SetVertexShader");
     hook(vt[VT_DEV_SETVSCONSTANTF], (void *)h_SetVSConstF, (void **)&o_SetVSConstF, "SetVertexShaderConstantF");
@@ -381,6 +396,7 @@ BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID reserved) {
         logf_("Blood Dragon d3d9 camera logger attached (pid %lu); it changes nothing unless the per-eye shift is on",
               (unsigned long)GetCurrentProcessId());
         stereo_init(g_dir, logf_);
+        sbs_init(g_dir, logf_);
         GetSystemDirectoryA(sys, MAX_PATH);
         lstrcatA(sys, "\\d3d9.dll");
         real = LoadLibraryA(sys);

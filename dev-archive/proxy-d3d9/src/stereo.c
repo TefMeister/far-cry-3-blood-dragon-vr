@@ -14,6 +14,7 @@ static int g_on, g_mode = MODE_ALTERNATE;
 static float g_sep = STEREO_SEP_DEFAULT;
 static int g_eye = 1;                 /* +1 right, -1 left: the eye of the frame now being drawn */
 static int g_cam_ok;                  /* the last c0/c4 block was the player's camera */
+static unsigned long g_frame_shifts;  /* camera blocks shifted in the frame now being drawn */
 static unsigned long g_frames, g_shifted[4], g_refused;
 static DWORD g_last_stats;
 static SHORT g_prev_keys[4];
@@ -34,6 +35,8 @@ void stereo_init(const char *exe_dir, StereoLogFn log) {
           g_on ? "ON from the start (fc3bd_vr_stereo_on.txt)" : "off", g_sep, k_mode_name[g_mode]);
 }
 
+int stereo_frame_eye(void) { return g_frame_shifts ? g_eye : 0; }
+
 void stereo_on_present(void) {
     DWORD now;
     if (key_pressed(0, VK_NUMPAD5)) { g_on = !g_on; g_log("stereo: %s", g_on ? "ON" : "off"); }
@@ -51,6 +54,7 @@ void stereo_on_present(void) {
     }
     g_eye = g_mode == MODE_LEFT ? -1 : g_mode == MODE_RIGHT ? 1 : -g_eye;
     g_cam_ok = 0;
+    g_frame_shifts = 0;
     g_frames++;
     now = GetTickCount();
     if (now - g_last_stats >= STEREO_STATS_MS) {
@@ -94,5 +98,6 @@ const float *stereo_filter(UINT start, const float *data, UINT count, float *scr
         g_shifted[3]++;
         touched = 1;
     }
+    if (touched) g_frame_shifts++;
     return touched ? scratch : data;
 }

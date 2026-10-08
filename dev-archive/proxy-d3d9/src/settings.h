@@ -4,6 +4,7 @@
 
 /* IDirect3D9 / IDirect3DDevice9 vtable slots (d3d9.h declaration order). */
 #define VT_D3D9_CREATEDEVICE        16
+#define VT_DEV_RESET                16
 #define VT_DEV_PRESENT              17
 #define VT_DEV_CREATEVERTEXSHADER   91
 #define VT_DEV_SETVERTEXSHADER      92
@@ -46,6 +47,11 @@
 #define STEREO_REG_VP               4u      /* c4-c7: view-projection with translation */
 #define STEREO_REG_VIEW             12u     /* c12-c15: view */
 #define STEREO_REG_INV_VIEW         32u     /* c32-c35: inverse view */
+
+/* Side by side (sbs.c, 2026-10-08): switch file, checked once a second while the game runs. */
+#define SBS_ON_FILE                 "fc3bd_vr_sbs.txt"
+#define SBS_SWITCH_CHECK_MS         1000u
+#define SBS_STATS_MS                5000u
 
 /* Constant-table bookkeeping. */
 #define SHADER_SLOTS                16384   /* shaders remembered, open addressing */
