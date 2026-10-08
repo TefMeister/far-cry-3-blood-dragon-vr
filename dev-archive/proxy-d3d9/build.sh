@@ -19,7 +19,7 @@ mkdir -p build
 "$CC" -shared -O2 -Wall -Wextra \
     -I"$MH/include" -Isrc \
     -o build/d3d9.dll \
-    src/proxy.c src/ctab.c \
+    src/proxy.c src/ctab.c src/stereo.c src/stereo_math.c \
     "$MH/src/hook.c" "$MH/src/buffer.c" "$MH/src/trampoline.c" "$MH/src/hde/hde32.c" \
     src/d3d9.def \
     -Wl,--no-insert-timestamp \
@@ -30,3 +30,8 @@ echo "Built build/d3d9.dll"
 # Host test of the constant-table reader against fxc-compiled shaders.
 gcc -O2 -Wall -Wextra -Wpedantic -o build/ctab_test.exe tools/ctab_test.c src/ctab.c
 ./build/ctab_test.exe tools/vs30.cso tools/vs20.cso
+
+# Host test of the per-eye shift against a camera actually moved sideways.
+gcc -O2 -Wall -Wextra -Wpedantic -o build/stereo_test.exe tools/stereo_test.c src/stereo_math.c -lm
+./build/stereo_test.exe
+sha256sum build/d3d9.dll
