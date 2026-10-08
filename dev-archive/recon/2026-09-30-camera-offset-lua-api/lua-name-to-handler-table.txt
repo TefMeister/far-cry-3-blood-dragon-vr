@@ -1,3 +1,7 @@
+# ⚠️ SUPERSEDED 2026-10-08: this table pairs every name with the handler registered AFTER it (off by one).
+# Each handler is pushed with lua_pushcclosure (0x1007cade) and THEN named with lua_setfield (0x1007cd9b).
+# Corrected table: staging/far-cry-3-blood-dragon-vr/camera-chain/lua-name-to-handler-table-CORRECTED.txt
+
 AddRecipeQuantity                        -> 10bb90f3
 SetRecipeUnlocked                        -> 10bb91cb
 AssignRecipeToSlot                       -> 10bb3d74

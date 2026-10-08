@@ -51,12 +51,19 @@
   every vertex shader's `name -> register` pairs from its constant table at creation, plus first-write
   snapshots. Reader tested 26/26 on `fxc`-compiled shaders `[verified-numerically 2026-09-30]`; the DLL
   exports exactly `Direct3DCreate9` `[compile-verified 2026-09-30]`. Not yet run.
-- **A native camera-position offset (2026-09-30):** the camera-offset names are Lua bindings. Under
-  `SetEffectiveCameraPositionOffset` the game reaches the player's camera controller through the entity
-  manager at `[0x11843740]` and copies an x/y/z vector to **controller `+0x98`**; the script path can be
-  refused by a condition, a direct write would not `[inferred-static 2026-09-30]`. Space (world or
-  camera) and per-frame behaviour unknown. `SetPlayerLookAngles` and `SetPlayerFOV` sit in the same
-  table. Detail: `dev-archive/recon/2026-09-30-camera-offset-lua-api/`.
+- **A native camera-position offset (2026-09-30) — ⚠️ CORRECTED 2026-10-08.** The 2026-09-30 name-to-handler
+  table was off by one (each handler is pushed with `lua_pushcclosure` `0x1007cade`, then named by the NEXT
+  `lua_setfield` `0x1007cd9b`; checked by hand at `0x10bb849a..c4`: `0x10bb4f96` = SetPlayerLookAngles,
+  `0x10bb75e8` = **Get**PlayerLookAngles) `[inferred-static 2026-10-08]`. So the `+0x98` write is
+  **SetDesiredCameraOffset**, and the angle setter is **SetPlayerLookAnglesFromAngles** (`0x10bb7ab8`).
+  **The chain from a global** (reader, `[inferred-static 2026-10-08]` except where marked): player manager
+  `PM = [0x11843330]` → `P = [[PM+8]]` (none while `[PM+0xC] == 0`) → handle `H = [[P+4]+0xC]` (`[hypothesis]`: no
+  RTTI) → entity `[H+0xC]` → component lookup `0x103dae45(ENT)` (thiscall, may return 0, game thread) → `S = [C+0x24]`;
+  **effective** block `S+0x4e0`, **desired** `S+0x2d0`; in each, `+0x98` camera offset, **`+0xa4` look angles**,
+  `+0xc4` position offset. The camera update (`0x10431bbb`) zeroes `+0x98`/`+0xc4` while a blend runs, so these are
+  "kick then blend back" requests: a VR offset probably has to be rewritten every frame `[hypothesis]`. Walker with
+  byte-signature checks: `staging/far-cry-3-blood-dragon-vr/camera-chain/fc3_camera_chain.h` `[compile-verified
+  2026-10-08]`. Detail: `dev-archive/recon/2026-10-08-camera-controller-chain/README.md`.
 - **⭐ MEASURED 2026-10-08 (`/lm`, two launches, camera trace): the view lands at `c12–c15`, as on Far Cry 2.**
   No shader carries a constant table (413 seen, 0 with one) `[measured 2026-10-08, n=2 launches]`, so the registers
   were read from values. One frame `[measured 2026-10-08, n=4 traces]`: `c12–c15` view (world → view), `c8–c11`
