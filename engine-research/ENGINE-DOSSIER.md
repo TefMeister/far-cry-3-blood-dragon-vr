@@ -23,7 +23,8 @@
 - Developer console / cvar system present? how opened?: not yet investigated.
 
 ## 4. DRM / anti-debug & injection foothold
-- DRM (CEG/Denuvo/GOG/none); launch-time-debugger behaviour: ⚠️ **Ubisoft Connect.** Both DLLs import `uplay_r1_loader.dll` and `ubiorbitapi_r2_loader.dll`, and `UbisoftConnectInstaller.exe` ships in the folder `[inferred-static 2026-09-15]`. So the game very probably needs Ubisoft Connect installed and signed in to start `[hypothesis]` — the same kind of publisher-launcher gate that stopped Burnout Paradise. Not tested live.
+- DRM (CEG/Denuvo/GOG/none); launch-time-debugger behaviour: ⚠️ **Ubisoft Connect.** Both DLLs import `uplay_r1_loader.dll` and `ubiorbitapi_r2_loader.dll`, and `UbisoftConnectInstaller.exe` ships in the folder `[inferred-static 2026-09-15]`. So the game very probably needs Ubisoft Connect installed and signed in to start `[hypothesis]` — the same kind of publisher-launcher gate that stopped Burnout Paradise. **Not a gate in practice (2026-10-08, dev PC):** launched from Steam, Ubisoft Connect signed in by itself and started the game, no dialog to answer `[verified-live 2026-10-08, n=3 launches]`. The game's online service is gone: an ERROR box ("service is not available") appears over the main menu and over the pause menu, Enter dismisses it, play is unaffected.
+- **Window, renderer and music: all in `Documents\My Games\Far Cry 3 Blood Dragon\GamerProfile.xml`.** `<RenderProfile ResolutionX="1280" ResolutionY="720" Fullscreen="0" UseD3D11="0">` → client area exactly 1280×720 (window 1286×749 at 0,0), desktop left at 1920×1080, and the **Direct3D 9** exe starts `[verified-live 2026-10-08, n=1]` (the shipped profile had `UseD3D11="1"`, which is why the first launch ran the D3D11 exe). Music: `<SoundProfile MusicEnabled="0">`, the only music switch (no volume) `[inferred-static 2026-10-08]`; silence not checked by ear. ⚠️ **Steam Cloud put the old file back on the next launch** `[verified-live 2026-10-08, n=1]`; the edited file is now **read-only**, which kept the settings `[verified-live 2026-10-08, n=1]`. Backups beside it: `GamerProfile.xml.bak-2026-10-08` (as shipped) and `.bak-2026-10-08-cloud`. Command-line switches seen in FC3.dll (`-xres -yres -skipintro -offline`) untested `[inferred-static 2026-10-08]`.
 - Attach workflow that works: not yet tested.
 - Injection vector that works (proxy DLL name / injector / framework): not yet tested.
 
@@ -77,8 +78,8 @@
 | | | |
 
 ## 10. Autonomous harness recipe (this game)
-- Launch to a known scene (commands used):
-- In-process input / camera drive method that worked:
+- Launch to a known scene (commands used): `steam://rungameid/233270`, then the menu route in `ai-game-control-profiles/profiles/far-cry-3-blood-dragon.json` (dismiss the service error, CAMPAIGN → CONTINUE, skip two story clips with Enter then Esc) → the helicopter gun scene `[verified-live 2026-10-08, n=2]`. Quit: pause → Down ×8 → QUIT TO DESKTOP → OK.
+- In-process input / camera drive method that worked: menus obey SendInput scancodes (Menu-o-matiC `press`) `[verified-live 2026-10-08]`; in-game movement not tried yet.
 - Frame-capture method; where images land:
 
 ## 11. Dead ends & false leads (save future time)
