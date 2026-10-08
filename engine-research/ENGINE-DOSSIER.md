@@ -78,6 +78,7 @@
   row 0 .w −= P00·d (P00 = c8 row 0 x); c32 translation += d·right `[inferred-static 2026-10-08]`, applied only to
   the player's camera (16:9 projection, not the mirrored copy).
 - **Built 2026-10-08 (`/pd`):** the shift above runs in `dev-archive/proxy-d3d9` (`abd6b4e78deb`, numpad 5, off by default); tested against a camera actually moved sideways, 16,962 checks `[verified-numerically 2026-10-08]`; Note `modding-notes/2026-10-08-pd-the-per-eye-shift.md`.
+- **Side by side, built 2026-10-08 (`/pd`):** `sbs.c` (`66a06df4a62d`, switch `fc3bd_vr_sbs.txt`) files each frame under the eye it was drawn for (read before the flip) and shows left | right in the window; eye-label parity test 575 checks, a flipped label fails 188 `[verified-numerically 2026-10-08]`; not run. Note `modding-notes/2026-10-08-pd-side-by-side.md`.
 - **⭐ LIVE 2026-10-08 evening (`/lm`): the shift gives real depth.** Left only vs right only on foot: near ground 23 px apart, mid rocks 12, far trees and sky 0, symmetric about the unshifted picture, left eye sees near things further right (right sign) `[measured 2026-10-08, n=1]`. c0/c4/c12/c32 each shifted ~40-50 times a frame; the sun's shadow cameras refused (~2,200 per 5 s on foot) `[verified-live 2026-10-08, n=1]`; no tearing in an alternating frame (by eye, n=1). Note `modding-notes/2026-10-08-lm-the-per-eye-shift-gives-real-depth.md`.
 
 ## 7. Constant-buffer fill mechanism
