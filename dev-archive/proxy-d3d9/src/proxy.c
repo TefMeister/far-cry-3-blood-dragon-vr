@@ -165,6 +165,42 @@ static int g_snapping, g_snaps_done, g_snap_lines;
 static unsigned char g_written[BD_VS_REGS];
 static void *g_cur_vs;
 
+/* camera trace state (settings.h, CAMTRACE_*) */
+static const UINT g_ct_regs[CAMTRACE_REG_COUNT] = CAMTRACE_REGS;
+static int g_ct_on, g_ct_lines;
+static float g_ct_last[CAMTRACE_REG_COUNT][16];
+static int g_ct_have[CAMTRACE_REG_COUNT];
+static unsigned long g_ct_writes[CAMTRACE_REG_COUNT], g_ct_distinct[CAMTRACE_REG_COUNT];
+
+static int file_present_then_delete(const char *name) {
+    char path[MAX_PATH];
+    snprintf(path, sizeof path, "%s%s", g_dir, name);
+    if (GetFileAttributesA(path) == INVALID_FILE_ATTRIBUTES) return 0;
+    DeleteFileA(path);
+    return 1;
+}
+
+static void camtrace_constants(UINT start, const float *data, UINT count) {
+    int i, r;
+    if (!data || count < 4) return;
+    for (i = 0; i < CAMTRACE_REG_COUNT; i++) {
+        if (g_ct_regs[i] != start) continue;
+        g_ct_writes[i]++;
+        if (g_ct_have[i] && memcmp(g_ct_last[i], data, sizeof g_ct_last[i]) == 0) return;
+        memcpy(g_ct_last[i], data, sizeof g_ct_last[i]);
+        g_ct_have[i] = 1;
+        g_ct_distinct[i]++;
+        if (g_ct_lines >= CAMTRACE_MAX_LINES) return;
+        g_ct_lines++;
+        logf_("cam f=%ld c%u write #%lu (distinct #%lu) shader=%p", g_frame, start, g_ct_writes[i], g_ct_distinct[i],
+              g_cur_vs);
+        for (r = 0; r < 4; r++)
+            logf_("   c%-3u % .5f % .5f % .5f % .5f", start + r, data[r * 4], data[r * 4 + 1], data[r * 4 + 2],
+                  data[r * 4 + 3]);
+        return;
+    }
+}
+
 static int arm_file_present(void) {
     char path[MAX_PATH];
     snprintf(path, sizeof path, "%s%s", g_dir, SNAP_ARM_FILE);
@@ -179,7 +215,23 @@ static void frame_boundary(void) {
         logf_("snap: end of frame %ld (%d lines)", g_frame, g_snap_lines);
         g_snapping = 0;
     }
+    if (g_ct_on) {
+        int i;
+        for (i = 0; i < CAMTRACE_REG_COUNT; i++)
+            logf_("camtrace: c%u written %lu times, %lu different values", g_ct_regs[i], g_ct_writes[i],
+                  g_ct_distinct[i]);
+        logf_("camtrace: end of frame %ld", g_frame);
+        g_ct_on = 0;
+    }
     g_frame++;
+    if (file_present_then_delete(CAMTRACE_ARM_FILE)) {
+        g_ct_on = 1;
+        g_ct_lines = 0;
+        memset(g_ct_have, 0, sizeof g_ct_have);
+        memset(g_ct_writes, 0, sizeof g_ct_writes);
+        memset(g_ct_distinct, 0, sizeof g_ct_distinct);
+        logf_("camtrace: frame %ld begins", g_frame);
+    }
     want = g_snaps_done < SNAP_MAX &&
            (g_frame == SNAP_FIRST_FRAME ||
             (g_frame > SNAP_FIRST_FRAME && (g_frame - SNAP_FIRST_FRAME) % SNAP_EVERY == 0));
@@ -262,9 +314,10 @@ static HRESULT WINAPI h_SetVS(void *dev, void *vs) {
 }
 
 static HRESULT WINAPI h_SetVSConstF(void *dev, UINT start, const float *data, UINT count) {
-    if (g_snapping) {
+    if (g_snapping || g_ct_on) {
         EnterCriticalSection(&g_cs);
         if (g_snapping) snap_constants(start, data, count);
+        if (g_ct_on) camtrace_constants(start, data, count);
         LeaveCriticalSection(&g_cs);
     }
     return o_SetVSConstF(dev, start, data, count);
