@@ -1,5 +1,6 @@
 #!/bin/bash
-# Builds the 32-bit d3d9.dll camera logger for Blood Dragon (FC3.dll is PE32/i386)
+# Builds the 32-bit d3d9.dll for Blood Dragon (FC3.dll is PE32/i386), WITH the OpenXR headset output
+# (src/xr_capture.c + src/xr_session.c, 2026-10-11; off unless fc3bd_vr_openxr.txt is beside the exe)
 # and runs the constant-table test. Run from Git Bash. Needs llvm-mingw
 # (i686-w64-mingw32-clang) on PATH or at the dev PC's WinGet path.
 set -e
@@ -16,15 +17,18 @@ MH=third_party/minhook
 mkdir -p build
 # -Wl,--no-insert-timestamp: identical source gives an identical file, so a
 # rebuild's hash can be compared with what is installed.
-"$CC" -shared -O2 -Wall -Wextra \
-    -I"$MH/include" -Isrc \
+"$CC" -shared -O2 -Wall -Wextra -Wno-missing-field-initializers \
+    -I"$MH/include" -Isrc -Ithird_party/openxr/include \
     -o build/d3d9.dll \
-    src/proxy.c src/ctab.c src/stereo.c src/stereo_math.c src/sbs.c \
+    src/proxy.c src/ctab.c src/stereo.c src/stereo_math.c src/sbs.c src/xr_capture.c src/xr_session.c \
     "$MH/src/hook.c" "$MH/src/buffer.c" "$MH/src/trampoline.c" "$MH/src/hde/hde32.c" \
     src/d3d9.def \
     -Wl,--no-insert-timestamp \
-    -luser32 -lkernel32
+    -luser32 -lkernel32 -ldxguid
 echo "Built build/d3d9.dll"
+"$TOOLCHAIN/i686-w64-mingw32-objdump" -p build/d3d9.dll | grep "DLL Name"
+# No-game headset test: built, NOT run by this script (it opens the runtime's preview window). See README.md, "Headset output".
+"$CC" -O2 -Wall -Wextra -o build/xr_selftest.exe tools/xr_selftest.c -luser32
 "$TOOLCHAIN/i686-w64-mingw32-objdump" -p build/d3d9.dll | sed -n '/Ordinal\/Name Pointer/,/^$/p'
 
 # Host test of the constant-table reader against fxc-compiled shaders.

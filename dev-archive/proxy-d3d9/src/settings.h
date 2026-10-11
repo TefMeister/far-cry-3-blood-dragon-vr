@@ -53,6 +53,24 @@
 #define SBS_SWITCH_CHECK_MS         1000u
 #define SBS_STATS_MS                5000u
 
+/* Headset output (xr_capture.c + xr_session.c, 2026-10-11): each eye's finished frame to OpenXR as a world-locked
+ * screen. OFF unless the switch file sits beside the exe (checked once a second; the headset thread starts the first
+ * time it is seen; removing it stops the capture, the session stays). Runtime for this game only: [vr] RuntimeJson=
+ * in the ini (must be a 32-bit runtime); [vr] TestPattern=1 shows left red / right blue instead of the game. */
+#define XR_ON_FILE                  "fc3bd_vr_openxr.txt"
+#define XR_INI_FILE                 "fc3bd_vr.ini"
+#define XR_LOADER_FILE              "openxr_loader.dll"
+#define XR_APP_NAME                 "far-cry-3-blood-dragon-vr"
+#define XR_SWITCH_CHECK_MS          1000u
+#define XR_SCREEN_DIST_M            2.0f    /* screen distance ahead of where the head was when it was placed */
+#define XR_SCREEN_WIDTH_M           3.2f    /* screen width; height follows the frame's aspect */
+#define XR_MAX_W                    4096
+#define XR_MAX_H                    4096
+#define XR_IDLE_SLEEP_MS            10u
+#define XR_STATS_MS                 5000u
+#define XR_MAX_SWAPCHAIN_FORMATS    64u
+#define XR_EVENT_LOG_MAX            8       /* session-state lines logged before going quiet */
+
 /* Constant-table bookkeeping. */
 #define SHADER_SLOTS                16384   /* shaders remembered, open addressing */
 #define SHADER_CONSTS_MAX           24      /* named constants kept per shader */

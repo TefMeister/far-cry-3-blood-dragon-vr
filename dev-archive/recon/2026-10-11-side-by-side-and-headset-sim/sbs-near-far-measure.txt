@@ -1,0 +1,10 @@
+fc9.png
+  rocks at the feet (nearest)  right-minus-left dx=-12 px  corr=0.85
+  middle rocks                 right-minus-left dx=-4 px  corr=0.85
+  cliff right (mid-far)        right-minus-left dx=-1 px  corr=0.97
+  far trees and towers         right-minus-left dx=+0 px  corr=0.98
+fc10.png
+  rocks at the feet (nearest)  right-minus-left dx=-12 px  corr=0.85
+  middle rocks                 right-minus-left dx=-4 px  corr=0.85
+  cliff right (mid-far)        right-minus-left dx=+0 px  corr=0.99
+  far trees and towers         right-minus-left dx=+0 px  corr=0.99

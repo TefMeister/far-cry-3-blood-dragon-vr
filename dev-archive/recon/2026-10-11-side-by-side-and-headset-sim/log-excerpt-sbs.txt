@@ -1,0 +1,14 @@
+[5195578] stereo: ON
+[5206062] sbs: ON (fc3bd_vr_sbs.txt)
+[5206062] sbs: per 5000 ms: captured left 0, right 0; composed 0; frames with no camera eye 0; failures 0 (last 0x00000000)
+[5206062] sbs: back buffer 1280x720 format 21 multisample 0 usage 0x1 pool 0
+[5206062] sbs: side-by-side surface 2560x720 format 21 -> 0x00000000
+[5211062] sbs: per 5000 ms: captured left 147, right 147; composed 293; frames with no camera eye 0; failures 0 (last 0x00000000)
+[5216078] sbs: per 5000 ms: captured left 150, right 150; composed 300; frames with no camera eye 0; failures 0 (last 0x00000000)
+[5221078] sbs: per 5000 ms: captured left 142, right 143; composed 285; frames with no camera eye 0; failures 0 (last 0x00000000)
+[5226093] sbs: per 5000 ms: captured left 147, right 146; composed 293; frames with no camera eye 0; failures 0 (last 0x00000000)
+[5231109] sbs: per 5000 ms: captured left 124, right 125; composed 249; frames with no camera eye 0; failures 0 (last 0x00000000)
+[5236109] sbs: per 5000 ms: captured left 143, right 142; composed 285; frames with no camera eye 0; failures 0 (last 0x00000000)
+[5241109] sbs: per 5000 ms: captured left 139, right 139; composed 278; frames with no camera eye 0; failures 0 (last 0x00000000)
+[5246109] sbs: per 5000 ms: captured left 148, right 148; composed 296; frames with no camera eye 0; failures 0 (last 0x00000000)
+[5248906] stereo: mode left only
