@@ -1,6 +1,8 @@
 # Research index
 
-**Last `/gr` pass: 2026-10-04 (estate sweep, second pass) — CHECK-IN.** Inbox empty; board `OPEN` rows read: first launch and our logger run, both FLAT. Nothing new.
+**Last `/gr` pass: 2026-10-11 (estate sweep) — CHECK-IN.** Inbox empty. One search for a newer Blood Dragon VR mod found only the 2017 vorpX profile. Nothing new.
+
+_Previous: **Last `/gr` pass: 2026-10-04 (estate sweep, second pass) — CHECK-IN.** Inbox empty; board `OPEN` rows read: first launch and our logger run, both FLAT. Nothing new._
 
 _Previous: **Last `/gr` pass: 2026-09-29 (estate sweep) — CHECK-IN.** Inbox empty; the two `[PD]` rows are internal (shader-constant logger, camera-offset callers) and the HeliX topic already covers the public side. Nothing new._
 
