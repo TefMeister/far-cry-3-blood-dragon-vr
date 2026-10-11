@@ -24,12 +24,14 @@
 #include "settings.h"
 #include "stereo.h"
 #include "sbs.h"
+#include "xr.h"
 
 /* ---------------- log ---------------- */
 
 static FILE *g_log;
 static char g_dir[MAX_PATH];
 static CRITICAL_SECTION g_cs;
+static CRITICAL_SECTION g_log_cs;   /* the headset thread logs too: one line at a time */
 
 static void log_open(void) {
     char path[MAX_PATH];
@@ -50,12 +52,14 @@ static void log_open(void) {
 static void logf_(const char *fmt, ...) {
     va_list ap;
     if (!g_log) return;
+    EnterCriticalSection(&g_log_cs);
     fprintf(g_log, "[%lu] ", (unsigned long)GetTickCount());
     va_start(ap, fmt);
     vfprintf(g_log, fmt, ap);
     va_end(ap);
     fputc('\n', g_log);
     fflush(g_log);
+    LeaveCriticalSection(&g_log_cs);
 }
 
 /* ---------------- constant-table registry ---------------- */
@@ -298,6 +302,7 @@ static int hook(void *target, void *detour, void **orig, const char *name) {
 static HRESULT WINAPI h_Present(void *dev, const RECT *a, const RECT *b, HWND w, const void *r) {
     EnterCriticalSection(&g_cs);
     frame_boundary();
+    xr_on_present(dev, stereo_frame_eye());    /* the eye's own picture, before sbs paints both halves over it */
     sbs_on_present(dev, stereo_frame_eye());   /* label with the eye this frame was drawn for, BEFORE the flip */
     stereo_on_present();
     LeaveCriticalSection(&g_cs);
@@ -308,6 +313,7 @@ static HRESULT WINAPI h_Reset(void *dev, void *pp) {
     HRESULT hr;
     EnterCriticalSection(&g_cs);
     sbs_on_reset();   /* default-pool surfaces must be released before a Reset */
+    xr_on_reset();
     LeaveCriticalSection(&g_cs);
     hr = o_Reset(dev, pp);
     logf_("Reset -> 0x%08lx", (unsigned long)hr);
@@ -392,11 +398,13 @@ BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID reserved) {
         HMODULE real;
         DisableThreadLibraryCalls(inst);
         InitializeCriticalSection(&g_cs);
+        InitializeCriticalSection(&g_log_cs);
         log_open();
         logf_("Blood Dragon d3d9 camera logger attached (pid %lu); it changes nothing unless the per-eye shift is on",
               (unsigned long)GetCurrentProcessId());
         stereo_init(g_dir, logf_);
         sbs_init(g_dir, logf_);
+        xr_init(logf_);
         GetSystemDirectoryA(sys, MAX_PATH);
         lstrcatA(sys, "\\d3d9.dll");
         real = LoadLibraryA(sys);
@@ -408,6 +416,7 @@ BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID reserved) {
         logf_("MinHook %s; shader table %s", g_mh_ready ? "ready" : "FAILED - logging only the create call",
               g_shaders ? "allocated" : "FAILED");
     } else if (reason == DLL_PROCESS_DETACH) {
+        xr_shutdown();
         logf_("detach after %ld frames, %d snapshots", g_frame, g_snaps_done);
         if (g_log) fclose(g_log);
     }

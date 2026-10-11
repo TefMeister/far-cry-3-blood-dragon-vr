@@ -1,0 +1,20 @@
+[5648078] xr: headset output off until fc3bd_vr_openxr.txt is beside the exe (runtime: [vr] RuntimeJson in fc3bd_vr.ini)
+[5663171] xr: capture ON (fc3bd_vr_openxr.txt)
+[5663171] xr: headset thread started
+[5663171] xr: per 5000 ms: captured left 0, right 0, no-camera (both eyes) 0; failures 0 (last 0x00000000)
+[5663187] xr: back buffer 1280x720 format 21 multisample 0
+[5663187] xr: runtime for this game only: D:\claude video game stuff\tools\OpenXR-Simulator\openxr_simulator-32.json
+[5663187] xr: capture surfaces 1280x720 format 21 -> 0x00000000
+[5663265] xr: session created; waiting for the runtime to start it
+[5663265] xr: session state 1
+[5663265] xr: session state 2
+[5663312] xr: session running
+[5663312] xr: session state 3
+[5663312] xr: session state 4
+[5663312] xr: session state 5
+[5663312] xr: two 1280x720 eye swapchains, format 91
+[5663312] xr: screen placed 2.0 m ahead at head height 1.70 m
+[5668171] xr: per 5000 ms: captured left 0, right 0, no-camera (both eyes) 167; failures 0 (last 0x00000000)
+[5668187] xr: headset per 5000 ms: frames submitted 297, empty 0, pictures uploaded 316
+[5673171] xr: per 5000 ms: captured left 0, right 0, no-camera (both eyes) 143; failures 0 (last 0x00000000)
+[5673187] xr: headset per 5000 ms: frames submitted 300, empty 0, pictures uploaded 288

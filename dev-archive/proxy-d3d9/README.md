@@ -57,3 +57,28 @@ Copy `build/d3d9.dll` into the game's `bin\` folder, beside `fc3_blooddragon.exe
 
 MinHook by Tsuda Kageyu (BSD-2, `third_party/minhook`). The constant-table approach follows this
 account's Alan Wake proxy; the first-write trick is Far Cry 2's.
+
+## Headset output (OpenXR) - this folder's addition, 2026-10-11
+
+This copy (staging `proxy-d3d9-xr`) is the dev-archive proxy plus `src/xr_capture.c` and `src/xr_session.c`, ported
+from Alan Wake's `aw_xr.c`. At each Present the finished back buffer is read back and stored as that eye's picture
+(the eye from `stereo_frame_eye()`; a frame with no camera shift, such as a menu, goes to both eyes). A headset
+thread shows each eye its own picture on a flat screen 2 m ahead (two quad layers, left-only and right-only),
+fixed where the head was when the session began. No head tracking. The readback waits for the GPU, so frame rate
+drops while it is on.
+
+**Off unless** an empty `fc3bd_vr_openxr.txt` is beside `fc3_blooddragon.exe` (checked once a second). Also needed
+there: the 32-bit `openxr_loader.dll` (OpenXR.Loader NuGet 1.0.10.2, `native/Win32/release/bin/`, SHA-256
+`fb1e06de9653...`; a copy is in `staging/hard-reset-vr/proxy-d3d9/build/`). To choose the runtime for this game
+only, `fc3bd_vr.ini`:
+
+```
+[vr]
+RuntimeJson=D:\claude video game stuff\tools\OpenXR-Simulator\openxr_simulator-32.json
+TestPattern=0
+```
+
+`TestPattern=1` shows left red / right blue instead of the game. Log lines start with `xr:`.
+
+No-game test: copy `openxr_loader.dll` into `build/`, then `build/xr_selftest.exe <32-bit runtime json> [secs]
+[pattern]`. It opens the runtime's window, so not while a game is being driven on the same PC.
