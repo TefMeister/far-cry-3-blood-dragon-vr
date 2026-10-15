@@ -20,7 +20,8 @@ mkdir -p build
 "$CC" -shared -O2 -Wall -Wextra -Wno-missing-field-initializers \
     -I"$MH/include" -Isrc -Ithird_party/openxr/include \
     -o build/d3d9.dll \
-    src/proxy.c src/ctab.c src/stereo.c src/stereo_math.c src/sbs.c src/xr_capture.c src/xr_session.c \
+    src/proxy.c src/ctab.c src/stereo.c src/stereo_math.c src/headrot.c src/sbs.c src/xr_capture.c src/xr_session.c \
+    src/xr_views.c \
     "$MH/src/hook.c" "$MH/src/buffer.c" "$MH/src/trampoline.c" "$MH/src/hde/hde32.c" \
     src/d3d9.def \
     -Wl,--no-insert-timestamp \
@@ -39,7 +40,12 @@ gcc -O2 -Wall -Wextra -Wpedantic -o build/ctab_test.exe tools/ctab_test.c src/ct
 gcc -O2 -Wall -Wextra -Wpedantic -o build/stereo_test.exe tools/stereo_test.c src/stereo_math.c -lm
 ./build/stereo_test.exe
 
+# The head's turn against a camera actually turned by the head (2026-10-15); the planted mistake must fail.
+gcc -O2 -Wall -Wextra -Wpedantic -o build/headrot_test.exe tools/headrot_test.c src/headrot.c src/stereo_math.c -lm
+./build/headrot_test.exe
+if ./build/headrot_test.exe wrong >/dev/null; then echo "headrot_test: the planted mistake PASSED - the test proves nothing"; exit 1; fi
+
 # The frame's eye label against the eye its camera was shifted for (the swapped-eyes trap).
-gcc -O2 -Wall -Wextra -Isrc -o build/parity_test.exe tools/parity_test.c src/stereo.c src/stereo_math.c -luser32 -lm
+gcc -O2 -Wall -Wextra -Isrc -o build/parity_test.exe tools/parity_test.c src/stereo.c src/stereo_math.c src/headrot.c -luser32 -lm
 ./build/parity_test.exe
 sha256sum build/d3d9.dll

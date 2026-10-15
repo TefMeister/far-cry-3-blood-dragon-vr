@@ -21,6 +21,7 @@
 
 #include "settings.h"
 #include "xr_shared.h"
+#include "xr_views.h"
 
 #define FMT_BGRA        87          /* DXGI_FORMAT_B8G8R8A8_UNORM */
 #define FMT_BGRA_SRGB   91          /* DXGI_FORMAT_B8G8R8A8_UNORM_SRGB */
@@ -35,7 +36,7 @@ XR_FN(xrDestroySession); XR_FN(xrCreateReferenceSpace); XR_FN(xrDestroySpace); X
 XR_FN(xrBeginSession); XR_FN(xrEndSession); XR_FN(xrEnumerateSwapchainFormats); XR_FN(xrCreateSwapchain);
 XR_FN(xrDestroySwapchain); XR_FN(xrEnumerateSwapchainImages); XR_FN(xrWaitFrame); XR_FN(xrBeginFrame);
 XR_FN(xrEndFrame); XR_FN(xrAcquireSwapchainImage); XR_FN(xrWaitSwapchainImage); XR_FN(xrReleaseSwapchainImage);
-XR_FN(xrGetD3D11GraphicsRequirementsKHR); XR_FN(xrLocateSpace);
+XR_FN(xrGetD3D11GraphicsRequirementsKHR); XR_FN(xrLocateSpace); XR_FN(xrLocateViews);
 
 typedef HRESULT(WINAPI *PFN_CreateDXGIFactory1_)(REFIID, void **);
 static PFN_D3D11_CREATE_DEVICE p_D3D11CreateDevice;
@@ -71,7 +72,8 @@ static int load_all(XrInstance i) {
            LOAD(i, xrEnumerateSwapchainFormats) && LOAD(i, xrCreateSwapchain) && LOAD(i, xrDestroySwapchain) &&
            LOAD(i, xrEnumerateSwapchainImages) && LOAD(i, xrWaitFrame) && LOAD(i, xrBeginFrame) &&
            LOAD(i, xrEndFrame) && LOAD(i, xrAcquireSwapchainImage) && LOAD(i, xrWaitSwapchainImage) &&
-           LOAD(i, xrReleaseSwapchainImage) && LOAD(i, xrGetD3D11GraphicsRequirementsKHR) && LOAD(i, xrLocateSpace);
+           LOAD(i, xrReleaseSwapchainImage) && LOAD(i, xrGetD3D11GraphicsRequirementsKHR) && LOAD(i, xrLocateSpace) &&
+           LOAD(i, xrLocateViews);
 }
 
 static void ini_path(char *out, size_t n) { snprintf(out, n, "%s%s", xr_exe_dir(), XR_INI_FILE); }
@@ -199,6 +201,25 @@ static void fill_quad(XrCompositionLayerQuad *q, XrSpace space, int e, const Eye
     q->size.height = XR_SCREEN_WIDTH_M * (float)h / (float)w;
 }
 
+/* Head orientation and both eyes' poses at the frame's display time, for the game's next frame (xr_views.h). */
+static void publish_pose(XrSession s, XrSpace space, XrSpace view_space, XrTime t) {
+    XrViewLocateInfo li = { XR_TYPE_VIEW_LOCATE_INFO };
+    XrViewState vs = { XR_TYPE_VIEW_STATE };
+    XrView v[2] = { { XR_TYPE_VIEW }, { XR_TYPE_VIEW } };
+    XrSpaceLocation head = { XR_TYPE_SPACE_LOCATION };
+    uint32_t n = 0;
+    li.viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+    li.displayTime = t;
+    li.space = space;
+    if (XR_FAILED(p_xrLocateViews(s, &li, &vs, 2, &n, v)) || n != 2 ||
+        !(vs.viewStateFlags & XR_VIEW_STATE_ORIENTATION_VALID_BIT))
+        return;
+    if (XR_FAILED(p_xrLocateSpace(view_space, space, t, &head)) ||
+        !(head.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT))
+        return;
+    xr_views_publish(&head.pose.orientation, v);
+}
+
 /* Session events; returns 0 when the session is ending for good. */
 static int poll_events(XrInstance inst, XrSession sess, int *running, int *logged) {
     XrEventDataBuffer ev;
@@ -294,6 +315,9 @@ void xr_session_main(void) {
         XrFrameBeginInfo fbi = { XR_TYPE_FRAME_BEGIN_INFO };
         XrFrameEndInfo fei = { XR_TYPE_FRAME_END_INFO };
         XrCompositionLayerQuad quad[2];
+        XrCompositionLayerProjection proj = { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
+        XrCompositionLayerProjectionView pv[2];
+        XrSwapchain sc[2];
         const XrCompositionLayerBaseHeader *layers[2];
         int have = 0;
 
@@ -321,6 +345,8 @@ void xr_session_main(void) {
                          (double)anchor.y);
             }
         }
+        if (view_space && (xr_views_head_on() || xr_views_projection_on()))
+            publish_pose(sess, space, view_space, fs.predictedDisplayTime);
         if (fs.shouldRender) {
             for (e = 0; e < 2; ++e) {
                 if (pattern ? !eye[e].uploaded : xr_frame_take(e, pix, w, h, &eye[e].serial)) {
@@ -330,7 +356,16 @@ void xr_session_main(void) {
                     uploads++;
                 }
             }
-            if (eye[0].uploaded && eye[1].uploaded) {
+            sc[0] = eye[0].sc;
+            sc[1] = eye[1].sc;
+            if (eye[0].uploaded && eye[1].uploaded && xr_views_projection_on() && !pattern &&
+                xr_views_fill_projection(pv, sc, w, h)) {
+                proj.space = space;
+                proj.viewCount = 2;
+                proj.views = pv;
+                layers[0] = (const XrCompositionLayerBaseHeader *)&proj;
+                have = 1;
+            } else if (eye[0].uploaded && eye[1].uploaded) {
                 for (e = 0; e < 2; ++e) {
                     fill_quad(&quad[e], space, e, &eye[e], anchor, w, h);
                     layers[e] = (const XrCompositionLayerBaseHeader *)&quad[e];

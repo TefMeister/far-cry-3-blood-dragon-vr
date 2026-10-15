@@ -12,6 +12,7 @@
 
 #include "settings.h"
 #include "xr_shared.h"
+#include "xr_views.h"
 
 XrLogFn g_xr_log;
 volatile LONG g_xr_run;
@@ -44,6 +45,11 @@ void xr_init(XrLogFn log) {
     if (slash) slash[1] = 0;
     snprintf(g_flag, sizeof g_flag, "%s%s", g_dir, XR_ON_FILE);
     InitializeCriticalSection(&g_frame_cs);
+    {
+        char ini[MAX_PATH];
+        snprintf(ini, sizeof ini, "%s%s", g_dir, XR_INI_FILE);
+        xr_views_init(ini, log);
+    }
     g_ready = 1;
     log("xr: headset output off until %s is beside the exe (runtime: [vr] RuntimeJson in %s)", XR_ON_FILE,
         XR_INI_FILE);
@@ -133,7 +139,7 @@ void xr_on_present(void *device, int eye) {
     int which = eye < 0 ? 0 : eye > 0 ? 1 : -1;
     if (!g_ready || !dev) return;
     check_switch();
-    if (!g_xr_capture || !g_xr_run) return;
+    if (!g_xr_capture || !g_xr_run) { xr_views_clear(); return; }
     stats();
     hr = IDirect3DDevice9_GetBackBuffer(dev, 0, 0, D3DBACKBUFFER_TYPE_MONO, &bb);
     if (SUCCEEDED(hr)) hr = IDirect3DSurface9_GetDesc(bb, &d);
@@ -158,11 +164,13 @@ void xr_on_present(void *device, int eye) {
         LeaveCriticalSection(&g_frame_cs);
         IDirect3DSurface9_UnlockRect(g_cap_sys);
         g_cap[which < 0 ? 2 : which]++;
+        xr_views_on_capture(which);       /* this picture was drawn with the render pose taken at the last Present */
     } else {
         g_fail++;
         g_last_hr = hr;
     }
     if (bb) IDirect3DSurface9_Release(bb);
+    xr_views_snapshot();                  /* the pose for the frame that starts now */
 }
 
 void xr_on_reset(void) { release_capture(); }

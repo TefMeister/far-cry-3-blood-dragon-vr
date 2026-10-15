@@ -71,6 +71,14 @@
 #define XR_MAX_SWAPCHAIN_FORMATS    64u
 #define XR_EVENT_LOG_MAX            8       /* session-state lines logged before going quiet */
 
+/* Head tracking and projection views (xr_views.c, 2026-10-15): [vr] keys in XR_INI_FILE, read when the headset
+ * output starts. HeadTrack=1 turns the player's camera with the head (only while the per-eye shift is on);
+ * Layers=projection shows each eye as a projection view at the pose it was drawn with, with the game's own lens. */
+#define XR_INI_HEADTRACK            "HeadTrack"
+#define XR_INI_LAYERS               "Layers"
+#define XR_LAYERS_PROJECTION        "projection"
+#define XR_RECENTRE_KEY             VK_NUMPAD2
+
 /* Constant-table bookkeeping. */
 #define SHADER_SLOTS                16384   /* shaders remembered, open addressing */
 #define SHADER_CONSTS_MAX           24      /* named constants kept per shader */

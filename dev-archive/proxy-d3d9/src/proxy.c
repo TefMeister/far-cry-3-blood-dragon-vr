@@ -25,6 +25,7 @@
 #include "stereo.h"
 #include "sbs.h"
 #include "xr.h"
+#include "xr_views.h"
 
 /* ---------------- log ---------------- */
 
@@ -302,9 +303,14 @@ static int hook(void *target, void *detour, void **orig, const char *name) {
 static HRESULT WINAPI h_Present(void *dev, const RECT *a, const RECT *b, HWND w, const void *r) {
     EnterCriticalSection(&g_cs);
     frame_boundary();
-    xr_on_present(dev, stereo_frame_eye());    /* the eye's own picture, before sbs paints both halves over it */
-    sbs_on_present(dev, stereo_frame_eye());   /* label with the eye this frame was drawn for, BEFORE the flip */
-    stereo_on_present();
+    {
+        float lens[4], rot[9];
+        if (stereo_lens(lens)) xr_views_set_lens(lens);
+        xr_on_present(dev, stereo_frame_eye());    /* the eye's own picture, before sbs paints both halves over it */
+        sbs_on_present(dev, stereo_frame_eye());   /* label with the eye this frame was drawn for, BEFORE the flip */
+        stereo_on_present();
+        stereo_set_head(xr_views_render_rot(rot) ? rot : NULL);   /* the head for the frame that starts now */
+    }
     LeaveCriticalSection(&g_cs);
     return o_Present(dev, a, b, w, r);
 }
