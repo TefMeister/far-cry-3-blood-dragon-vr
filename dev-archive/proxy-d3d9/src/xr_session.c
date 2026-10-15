@@ -246,32 +246,44 @@ static int poll_events(XrInstance inst, XrSession sess, int *running, int *logge
     return 1;
 }
 
-void xr_session_main(void) {
-    char path[MAX_PATH];
+/* Everything the headset thread owns, so setup, one frame and teardown can be separate functions (2026-10-15 split,
+ * move-only: the body of the old single xr_session_main, unchanged). */
+typedef struct {
     HMODULE lib;
-    XrInstance inst = XR_NULL_HANDLE;
-    XrSystemId sys = XR_NULL_SYSTEM_ID;
-    XrSession sess = XR_NULL_HANDLE;
-    XrSpace space = XR_NULL_HANDLE, view_space = XR_NULL_HANDLE;
-    XrVector3f anchor = { 0.0f, 0.0f, 0.0f };
-    ID3D11Device *dev = NULL;
-    ID3D11DeviceContext *ctx = NULL;
+    XrInstance inst;
+    XrSystemId sys;
+    XrSession sess;
+    XrSpace space, view_space;
+    XrVector3f anchor;
+    ID3D11Device *dev;
+    ID3D11DeviceContext *ctx;
     EyeChain eye[2];
-    unsigned char *pix = NULL;
-    int running = 0, anchored = 0, w = 0, h = 0, swap_rb = 0, e, logged = 0, pattern;
-    int64_t fmt = 0;
-    unsigned long submitted = 0, empty = 0, uploads = 0;
-    DWORD last_stats = GetTickCount();
-    XrResult r;
-    memset(eye, 0, sizeof eye);
+    unsigned char *pix;
+    int running, anchored, w, h, swap_rb, logged, pattern;
+    int64_t fmt;
+    unsigned long submitted, empty, uploads;
+    DWORD last_stats;
+} XrRig;
 
+enum { RIG_GIVE_UP = -1, RIG_CLEAN_UP = 0, RIG_READY = 1 };
+
+/* Loader, instance, system, device, session, spaces. RIG_GIVE_UP: nothing was made, just return. */
+static int rig_open(XrRig *g) {
+    char path[MAX_PATH];
+    XrResult r;
     apply_runtime_choice();
-    pattern = test_pattern_on();
+    g->pattern = test_pattern_on();
     snprintf(path, sizeof path, "%s%s", xr_exe_dir(), XR_LOADER_FILE);
-    lib = LoadLibraryA(path);
-    if (!lib) { g_xr_log("xr: %s not found beside the exe - headset output OFF", XR_LOADER_FILE); return; }
-    p_gipa = (PFN_xrGetInstanceProcAddr)(void *)GetProcAddress(lib, "xrGetInstanceProcAddr");
-    if (!p_gipa || !LOAD(XR_NULL_HANDLE, xrCreateInstance)) { g_xr_log("xr: loader has no entry point"); return; }
+    g->lib = LoadLibraryA(path);
+    if (!g->lib) {
+        g_xr_log("xr: %s not found beside the exe - headset output OFF", XR_LOADER_FILE);
+        return RIG_GIVE_UP;
+    }
+    p_gipa = (PFN_xrGetInstanceProcAddr)(void *)GetProcAddress(g->lib, "xrGetInstanceProcAddr");
+    if (!p_gipa || !LOAD(XR_NULL_HANDLE, xrCreateInstance)) {
+        g_xr_log("xr: loader has no entry point");
+        return RIG_GIVE_UP;
+    }
     {
         const char *exts[1] = { XR_KHR_D3D11_ENABLE_EXTENSION_NAME };
         XrInstanceCreateInfo ici;
@@ -281,123 +293,159 @@ void xr_session_main(void) {
         ici.applicationInfo.apiVersion = XR_CURRENT_API_VERSION;
         ici.enabledExtensionCount = 1;
         ici.enabledExtensionNames = exts;
-        r = p_xrCreateInstance(&ici, &inst);
-        if (XR_FAILED(r)) { logx("xrCreateInstance failed: no usable 32-bit runtime with D3D11", r); return; }
+        r = p_xrCreateInstance(&ici, &g->inst);
+        if (XR_FAILED(r)) {
+            logx("xrCreateInstance failed: no usable 32-bit runtime with D3D11", r);
+            return RIG_GIVE_UP;
+        }
     }
-    if (!load_all(inst)) { g_xr_log("xr: a required OpenXR function is missing"); goto done; }
+    if (!load_all(g->inst)) { g_xr_log("xr: a required OpenXR function is missing"); return RIG_CLEAN_UP; }
     {
         XrSystemGetInfo gi = { XR_TYPE_SYSTEM_GET_INFO };
         gi.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
-        r = p_xrGetSystem(inst, &gi, &sys);
-        if (XR_FAILED(r)) { logx("no headset system", r); goto done; }
+        r = p_xrGetSystem(g->inst, &gi, &g->sys);
+        if (XR_FAILED(r)) { logx("no headset system", r); return RIG_CLEAN_UP; }
     }
-    if (!make_device(inst, sys, &dev, &ctx)) goto done;
+    if (!make_device(g->inst, g->sys, &g->dev, &g->ctx)) return RIG_CLEAN_UP;
     {
         XrGraphicsBindingD3D11KHR bind = { XR_TYPE_GRAPHICS_BINDING_D3D11_KHR };
         XrSessionCreateInfo sci = { XR_TYPE_SESSION_CREATE_INFO };
         XrReferenceSpaceCreateInfo rs = { XR_TYPE_REFERENCE_SPACE_CREATE_INFO };
-        bind.device = dev;
+        bind.device = g->dev;
         sci.next = &bind;
-        sci.systemId = sys;
-        r = p_xrCreateSession(inst, &sci, &sess);
-        if (XR_FAILED(r)) { logx("session failed", r); goto done; }
+        sci.systemId = g->sys;
+        r = p_xrCreateSession(g->inst, &sci, &g->sess);
+        if (XR_FAILED(r)) { logx("session failed", r); return RIG_CLEAN_UP; }
         rs.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
         rs.poseInReferenceSpace.orientation.w = 1.0f;
-        p_xrCreateReferenceSpace(sess, &rs, &space);
+        p_xrCreateReferenceSpace(g->sess, &rs, &g->space);
         rs.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_VIEW;   /* the head, to place the screen at eye height */
-        p_xrCreateReferenceSpace(sess, &rs, &view_space);
+        p_xrCreateReferenceSpace(g->sess, &rs, &g->view_space);
     }
-    g_xr_log("xr: session created%s; waiting for the runtime to start it", pattern ? " (TEST PATTERN)" : "");
+    g_xr_log("xr: session created%s; waiting for the runtime to start it", g->pattern ? " (TEST PATTERN)" : "");
+    return RIG_READY;
+}
 
-    while (InterlockedCompareExchange(&g_xr_run, 1, 1) == 1) {
-        XrFrameWaitInfo fwi = { XR_TYPE_FRAME_WAIT_INFO };
-        XrFrameState fs = { XR_TYPE_FRAME_STATE };
-        XrFrameBeginInfo fbi = { XR_TYPE_FRAME_BEGIN_INFO };
-        XrFrameEndInfo fei = { XR_TYPE_FRAME_END_INFO };
-        XrCompositionLayerQuad quad[2];
-        XrCompositionLayerProjection proj = { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
-        XrCompositionLayerProjectionView pv[2];
-        XrSwapchain sc[2];
-        const XrCompositionLayerBaseHeader *layers[2];
-        int have = 0;
-
-        if (!poll_events(inst, sess, &running, &logged)) break;
-        if (!running) { Sleep(XR_IDLE_SLEEP_MS); continue; }
-        if (!eye[0].sc) {                         /* swapchains once the first picture's size is known */
-            xr_frame_size(&w, &h);
-            if (w <= 0 || h <= 0) { Sleep(XR_IDLE_SLEEP_MS); continue; }
-            if (!pick_format(sess, &fmt, &swap_rb) || !make_chain(sess, fmt, w, h, &eye[0]) ||
-                !make_chain(sess, fmt, w, h, &eye[1]) || !(pix = (unsigned char *)malloc((size_t)w * h * 4))) {
-                g_xr_log("xr: swapchain setup failed");
-                break;
-            }
-            g_xr_log("xr: two %dx%d eye swapchains, format %d%s", w, h, (int)fmt, swap_rb ? " (swizzled)" : "");
-        }
-        if (XR_FAILED(p_xrWaitFrame(sess, &fwi, &fs))) { Sleep(XR_IDLE_SLEEP_MS); continue; }
-        p_xrBeginFrame(sess, &fbi);
-        if (!anchored && view_space) {             /* the screen goes where the head is at the start, then stays */
-            XrSpaceLocation loc = { XR_TYPE_SPACE_LOCATION };
-            if (XR_SUCCEEDED(p_xrLocateSpace(view_space, space, fs.predictedDisplayTime, &loc)) &&
-                (loc.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT)) {
-                anchor = loc.pose.position;
-                anchored = 1;
-                g_xr_log("xr: screen placed %.1f m ahead at head height %.2f m", (double)XR_SCREEN_DIST_M,
-                         (double)anchor.y);
-            }
-        }
-        if (view_space && (xr_views_head_on() || xr_views_projection_on()))
-            publish_pose(sess, space, view_space, fs.predictedDisplayTime);
-        if (fs.shouldRender) {
-            for (e = 0; e < 2; ++e) {
-                if (pattern ? !eye[e].uploaded : xr_frame_take(e, pix, w, h, &eye[e].serial)) {
-                    if (pattern) fill_pattern(pix, w * h, e);
-                    to_swapchain_order(pix, w * h, swap_rb);
-                    upload(ctx, &eye[e], pix, w);
-                    uploads++;
-                }
-            }
-            sc[0] = eye[0].sc;
-            sc[1] = eye[1].sc;
-            if (eye[0].uploaded && eye[1].uploaded && xr_views_projection_on() && !pattern &&
-                xr_views_fill_projection(pv, sc, w, h)) {
-                proj.space = space;
-                proj.viewCount = 2;
-                proj.views = pv;
-                layers[0] = (const XrCompositionLayerBaseHeader *)&proj;
-                have = 1;
-            } else if (eye[0].uploaded && eye[1].uploaded) {
-                for (e = 0; e < 2; ++e) {
-                    fill_quad(&quad[e], space, e, &eye[e], anchor, w, h);
-                    layers[e] = (const XrCompositionLayerBaseHeader *)&quad[e];
-                }
-                have = 2;
-            }
-        }
-        fei.displayTime = fs.predictedDisplayTime;
-        fei.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
-        fei.layerCount = (uint32_t)have;
-        fei.layers = have ? layers : NULL;
-        p_xrEndFrame(sess, &fei);
-        if (have) submitted++; else empty++;
-        if (GetTickCount() - last_stats >= XR_STATS_MS) {
-            last_stats = GetTickCount();
-            g_xr_log("xr: headset per %u ms: frames submitted %lu, empty %lu, pictures uploaded %lu", XR_STATS_MS,
-                     submitted, empty, uploads);
-            submitted = empty = uploads = 0;
-        }
+/* Swapchains once the first picture's size is known. 1 = ready, 0 = not yet (sleep and retry), -1 = failed. */
+static int rig_swapchains(XrRig *g) {
+    if (g->eye[0].sc) return 1;
+    xr_frame_size(&g->w, &g->h);
+    if (g->w <= 0 || g->h <= 0) return 0;
+    if (!pick_format(g->sess, &g->fmt, &g->swap_rb) || !make_chain(g->sess, g->fmt, g->w, g->h, &g->eye[0]) ||
+        !make_chain(g->sess, g->fmt, g->w, g->h, &g->eye[1]) ||
+        !(g->pix = (unsigned char *)malloc((size_t)g->w * g->h * 4))) {
+        g_xr_log("xr: swapchain setup failed");
+        return -1;
     }
+    g_xr_log("xr: two %dx%d eye swapchains, format %d%s", g->w, g->h, (int)g->fmt, g->swap_rb ? " (swizzled)" : "");
+    return 1;
+}
 
-done:
+/* The screen goes where the head is at the start, then stays. */
+static void rig_anchor(XrRig *g, XrTime t) {
+    XrSpaceLocation loc = { XR_TYPE_SPACE_LOCATION };
+    if (g->anchored || !g->view_space) return;
+    if (XR_SUCCEEDED(p_xrLocateSpace(g->view_space, g->space, t, &loc)) &&
+        (loc.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT)) {
+        g->anchor = loc.pose.position;
+        g->anchored = 1;
+        g_xr_log("xr: screen placed %.1f m ahead at head height %.2f m", (double)XR_SCREEN_DIST_M,
+                 (double)g->anchor.y);
+    }
+}
+
+/* New pictures into the swapchains, then the layers: one projection layer, or two quads. Returns the layer count. */
+static int rig_layers(XrRig *g, XrCompositionLayerQuad *quad, XrCompositionLayerProjection *proj,
+                      XrCompositionLayerProjectionView *pv, const XrCompositionLayerBaseHeader **layers) {
+    XrSwapchain sc[2];
+    int e;
     for (e = 0; e < 2; ++e) {
-        if (eye[e].sc) p_xrDestroySwapchain(eye[e].sc);
-        free(eye[e].img);
+        if (g->pattern ? !g->eye[e].uploaded : xr_frame_take(e, g->pix, g->w, g->h, &g->eye[e].serial)) {
+            if (g->pattern) fill_pattern(g->pix, g->w * g->h, e);
+            to_swapchain_order(g->pix, g->w * g->h, g->swap_rb);
+            upload(g->ctx, &g->eye[e], g->pix, g->w);
+            g->uploads++;
+        }
     }
-    free(pix);
-    if (view_space) p_xrDestroySpace(view_space);
-    if (space) p_xrDestroySpace(space);
-    if (sess) p_xrDestroySession(sess);
-    if (ctx) ID3D11DeviceContext_Release(ctx);
-    if (dev) ID3D11Device_Release(dev);
-    if (inst && p_xrDestroyInstance) p_xrDestroyInstance(inst);
+    if (!g->eye[0].uploaded || !g->eye[1].uploaded) return 0;
+    sc[0] = g->eye[0].sc;
+    sc[1] = g->eye[1].sc;
+    if (xr_views_projection_on() && !g->pattern && xr_views_fill_projection(pv, sc, g->w, g->h)) {
+        proj->space = g->space;
+        proj->viewCount = 2;
+        proj->views = pv;
+        layers[0] = (const XrCompositionLayerBaseHeader *)proj;
+        return 1;
+    }
+    for (e = 0; e < 2; ++e) {
+        fill_quad(&quad[e], g->space, e, &g->eye[e], g->anchor, g->w, g->h);
+        layers[e] = (const XrCompositionLayerBaseHeader *)&quad[e];
+    }
+    return 2;
+}
+
+/* One pass of the headset loop. 0 = stop for good. */
+static int rig_frame(XrRig *g) {
+    XrFrameWaitInfo fwi = { XR_TYPE_FRAME_WAIT_INFO };
+    XrFrameState fs = { XR_TYPE_FRAME_STATE };
+    XrFrameBeginInfo fbi = { XR_TYPE_FRAME_BEGIN_INFO };
+    XrFrameEndInfo fei = { XR_TYPE_FRAME_END_INFO };
+    XrCompositionLayerQuad quad[2];
+    XrCompositionLayerProjection proj = { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
+    XrCompositionLayerProjectionView pv[2];
+    const XrCompositionLayerBaseHeader *layers[2];
+    int have = 0, chains;
+
+    if (!poll_events(g->inst, g->sess, &g->running, &g->logged)) return 0;
+    if (!g->running) { Sleep(XR_IDLE_SLEEP_MS); return 1; }
+    chains = rig_swapchains(g);
+    if (chains < 0) return 0;
+    if (chains == 0) { Sleep(XR_IDLE_SLEEP_MS); return 1; }
+    if (XR_FAILED(p_xrWaitFrame(g->sess, &fwi, &fs))) { Sleep(XR_IDLE_SLEEP_MS); return 1; }
+    p_xrBeginFrame(g->sess, &fbi);
+    rig_anchor(g, fs.predictedDisplayTime);
+    if (g->view_space && (xr_views_head_on() || xr_views_projection_on()))
+        publish_pose(g->sess, g->space, g->view_space, fs.predictedDisplayTime);
+    if (fs.shouldRender) have = rig_layers(g, quad, &proj, pv, layers);
+    fei.displayTime = fs.predictedDisplayTime;
+    fei.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
+    fei.layerCount = (uint32_t)have;
+    fei.layers = have ? layers : NULL;
+    p_xrEndFrame(g->sess, &fei);
+    if (have) g->submitted++; else g->empty++;
+    if (GetTickCount() - g->last_stats >= XR_STATS_MS) {
+        g->last_stats = GetTickCount();
+        g_xr_log("xr: headset per %u ms: frames submitted %lu, empty %lu, pictures uploaded %lu", XR_STATS_MS,
+                 g->submitted, g->empty, g->uploads);
+        g->submitted = g->empty = g->uploads = 0;
+    }
+    return 1;
+}
+
+static void rig_close(XrRig *g) {
+    int e;
+    for (e = 0; e < 2; ++e) {
+        if (g->eye[e].sc) p_xrDestroySwapchain(g->eye[e].sc);
+        free(g->eye[e].img);
+    }
+    free(g->pix);
+    if (g->view_space) p_xrDestroySpace(g->view_space);
+    if (g->space) p_xrDestroySpace(g->space);
+    if (g->sess) p_xrDestroySession(g->sess);
+    if (g->ctx) ID3D11DeviceContext_Release(g->ctx);
+    if (g->dev) ID3D11Device_Release(g->dev);
+    if (g->inst && p_xrDestroyInstance) p_xrDestroyInstance(g->inst);
     g_xr_log("xr: headset output stopped");
+}
+
+void xr_session_main(void) {
+    XrRig g;
+    int st;
+    memset(&g, 0, sizeof g);
+    g.last_stats = GetTickCount();
+    st = rig_open(&g);
+    if (st == RIG_GIVE_UP) return;
+    if (st == RIG_READY)
+        while (InterlockedCompareExchange(&g_xr_run, 1, 1) == 1 && rig_frame(&g)) {}
+    rig_close(&g);
 }
