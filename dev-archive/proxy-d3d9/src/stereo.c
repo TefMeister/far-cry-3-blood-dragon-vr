@@ -5,6 +5,7 @@
 #include "settings.h"
 #include "stereo.h"
 #include "stereo_math.h"
+#include "headrot.h"
 
 enum { MODE_ALTERNATE = 0, MODE_LEFT, MODE_RIGHT, MODE_COUNT };
 static const char *const k_mode_name[MODE_COUNT] = { "alternate", "left only", "right only" };
@@ -18,6 +19,11 @@ static unsigned long g_frame_shifts;  /* camera blocks shifted in the frame now 
 static unsigned long g_frames, g_shifted[4], g_refused;
 static DWORD g_last_stats;
 static SHORT g_prev_keys[4];
+static float g_head[9];
+static int g_head_on;                 /* g_head turns the player's camera this frame */
+static HrLens g_lens;
+static int g_lens_ok;
+static unsigned long g_turned;
 
 static int key_pressed(int idx, int vk) {
     SHORT now = GetAsyncKeyState(vk);
@@ -36,6 +42,17 @@ void stereo_init(const char *exe_dir, StereoLogFn log) {
 }
 
 int stereo_frame_eye(void) { return g_frame_shifts ? g_eye : 0; }
+
+void stereo_set_head(const float *rot9) {
+    g_head_on = rot9 != NULL;
+    if (rot9) memcpy(g_head, rot9, sizeof g_head);
+}
+
+int stereo_lens(float tan4[4]) {
+    if (!g_lens_ok) return 0;
+    hr_lens_tangents(&g_lens, tan4);
+    return 1;
+}
 
 void stereo_on_present(void) {
     DWORD now;
@@ -59,10 +76,11 @@ void stereo_on_present(void) {
     now = GetTickCount();
     if (now - g_last_stats >= STEREO_STATS_MS) {
         if (g_on || g_shifted[0] || g_refused)
-            g_log("stereo: %lu frames; shifted c0 %lu, c4 %lu, c12 %lu, c32 %lu; other cameras left alone %lu",
-                  g_frames, g_shifted[0], g_shifted[1], g_shifted[2], g_shifted[3], g_refused);
+            g_log("stereo: %lu frames; shifted c0 %lu, c4 %lu, c12 %lu, c32 %lu; other cameras left alone %lu; "
+                  "blocks turned by the head %lu", g_frames, g_shifted[0], g_shifted[1], g_shifted[2], g_shifted[3],
+                  g_refused, g_turned);
         g_last_stats = now;
-        g_frames = g_refused = 0;
+        g_frames = g_refused = g_turned = 0;
         memset(g_shifted, 0, sizeof g_shifted);
     }
 }
@@ -85,15 +103,23 @@ const float *stereo_filter(UINT start, const float *data, UINT count, float *scr
         m = block(start, count, scratch, vp_regs[i]);
         if (!m) continue;
         g_cam_ok = st_is_persp_vp(m, STEREO_ASPECT_MIN, STEREO_ASPECT_MAX);
-        if (g_cam_ok) { st_shift_vp(m, d); g_shifted[i]++; touched = 1; }
+        if (g_cam_ok) {
+            g_lens_ok |= hr_vp_lens(m, &g_lens);
+            if (g_head_on && hr_rotate_vp(m, g_head, NULL)) g_turned++;
+            st_shift_vp(m, d);
+            g_shifted[i]++;
+            touched = 1;
+        }
         else g_refused++;
     }
     if (g_cam_ok && (m = block(start, count, scratch, STEREO_REG_VIEW)) && st_is_rigid(m)) {
+        if (g_head_on) { hr_rotate_view(m, g_head); g_turned++; }
         st_shift_view(m, d);
         g_shifted[2]++;
         touched = 1;
     }
     if (g_cam_ok && (m = block(start, count, scratch, STEREO_REG_INV_VIEW)) && st_is_rigid(m)) {
+        if (g_head_on) { hr_rotate_inv_view(m, g_head); g_turned++; }
         st_shift_inv_view(m, d);
         g_shifted[3]++;
         touched = 1;

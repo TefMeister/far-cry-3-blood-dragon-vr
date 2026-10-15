@@ -82,3 +82,23 @@ TestPattern=0
 
 No-game test: copy `openxr_loader.dll` into `build/`, then `build/xr_selftest.exe <32-bit runtime json> [secs]
 [pattern]`. It opens the runtime's window, so not while a game is being driven on the same PC.
+
+## Head tracking and projection views - 2026-10-15 (`/pd`, not run yet)
+
+`src/headrot.c` turns the player's camera blocks by the headset's head rotation, on top of the camera the game chose:
+view c12 `V' = R^T V`, inverse view c32 `M' = M R`, and the view-projections c0 and c4 by taking the lens out of
+the block, turning the view inside it and putting the lens back. This game's view is right-handed with -z forward,
+the same as OpenXR's, so the headset's orientation is used as it comes. The per-eye shift runs after the turn, so
+each eye sits on the head's right axis. `src/xr_views.c` shares the pose between the headset thread and the game:
+each picture is filed with the pose and the game's own lens it was drawn with, and with `Layers=projection` the eyes
+are shown as projection views at that pose (the runtime corrects only for head movement since), instead of the
+floating screen. The game's lens is 46.7 degrees tall, so the picture fills the middle of the headset's view, not
+all of it; filling the eye is a later step.
+
+Settings, `[vr]` in `fc3bd_vr.ini`: `HeadTrack=1`, `Layers=projection` (both off when missing). Head tracking only
+acts while the per-eye shift is on (numpad 5 or `fc3bd_vr_stereo_on.txt`). Numpad 2 re-centres: the way the headset
+faces becomes the game's forward. The log's stereo line counts `blocks turned by the head`.
+
+Tests (`build.sh`): `tools/headrot_test.c`, 45,506 checks against cameras rebuilt with the head's axes, the
+quaternion against a direct rotation, re-centring, the lens edges, turn-then-shift; with `wrong` (R used for R^T)
+40,478 fail, and the build stops if that planted mistake ever passes.

@@ -23,6 +23,13 @@ int stereo_frame_eye(void);
 /* At each Present, before the real one: keys, the eye flip, a stats line now and then. */
 void stereo_on_present(void);
 
+/* At each Present, AFTER stereo_on_present(): the head rotation (headrot.h, 3x3 row-major) to turn the player's
+ * camera by in the frame that starts now, or NULL for none. Applied only while the per-eye shift is on, before it. */
+void stereo_set_head(const float *rot9);
+
+/* The lens of the last player camera seen (fov tangents {left, right, up, down}); 0 before the first one. */
+int stereo_lens(float tan4[4]);
+
 /* At SetVertexShaderConstantF: returns `data`, or `scratch` (room for `count` registers) holding the shifted copy. */
 const float *stereo_filter(UINT start, const float *data, UINT count, float *scratch);
 

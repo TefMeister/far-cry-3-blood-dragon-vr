@@ -77,6 +77,14 @@
 - The per-eye override maths (`K_eye = …`): a sideways eye shift d in view space is c12 row 0 .w −= d; c0 and c4
   row 0 .w −= P00·d (P00 = c8 row 0 x); c32 translation += d·right `[inferred-static 2026-10-08]`, applied only to
   the player's camera (16:9 projection, not the mirrored copy).
+- **Head tracking built 2026-10-15 (`/pd`, not run):** the view convention read from the 2026-10-08 trace is
+  right-handed, -z forward (c12 row 2 = minus the forward axis; c8 last row (0, 0, -1, 0)), the same as OpenXR's, so
+  the head quaternion needs no mirroring `[inferred-static 2026-10-15]`. Turn: c12 `V' = R^T V`, c32 `M' = M R`, c0/c4
+  by splitting out the lens (r3 = -V2, p02 = r0.V2, xs = |r0 - p02 V2|, ...) and rebuilding `[verified-numerically
+  2026-10-15, 45,506 checks]`. Eyes submitted as projection views at their render pose with the game's lens
+  (`dev-archive/proxy-d3d9`, `12d232b7658f`, `[vr] HeadTrack=1`, `Layers=projection`) `[compile-verified 2026-10-15]`.
+  The water-reflection copy of the camera (mirrored) is turned by the same R, which is probably wrong for a mirror
+  `[hypothesis]`; the shift already treats it the same way.
 - **Built 2026-10-08 (`/pd`):** the shift above runs in `dev-archive/proxy-d3d9` (`abd6b4e78deb`, numpad 5, off by default); tested against a camera actually moved sideways, 16,962 checks `[verified-numerically 2026-10-08]`; Note `modding-notes/2026-10-08-pd-the-per-eye-shift.md`.
 - **Side by side, built 2026-10-08 (`/pd`):** `sbs.c` (`66a06df4a62d`, switch `fc3bd_vr_sbs.txt`) files each frame under the eye it was drawn for (read before the flip) and shows left | right in the window; eye-label parity test 575 checks, a flipped label fails 188 `[verified-numerically 2026-10-08]`; not run. Note `modding-notes/2026-10-08-pd-side-by-side.md`.
 - **⭐ LIVE 2026-10-08 evening (`/lm`): the shift gives real depth.** Left only vs right only on foot: near ground 23 px apart, mid rocks 12, far trees and sky 0, symmetric about the unshifted picture, left eye sees near things further right (right sign) `[measured 2026-10-08, n=1]`. c0/c4/c12/c32 each shifted ~40-50 times a frame; the sun's shadow cameras refused (~2,200 per 5 s on foot) `[verified-live 2026-10-08, n=1]`; no tearing in an alternating frame (by eye, n=1). Note `modding-notes/2026-10-08-lm-the-per-eye-shift-gives-real-depth.md`.
