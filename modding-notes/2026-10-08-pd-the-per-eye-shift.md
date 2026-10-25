@@ -2,7 +2,7 @@
 
 **The game was not launched, and nothing here has been run in the game.**
 
-`dev-archive/proxy-d3d9` (`da36771`), `d3d9.dll` `abd6b4e78deb`, installed in `bin\` `[compile-verified 2026-10-08]`.
+`dev-archive/proxy-d3d9` (`642d29f`), `d3d9.dll` `abd6b4e78deb`, installed in `bin\` `[compile-verified 2026-10-08]`.
 Off unless `fc3bd_vr_stereo_on.txt` is beside the exe or numpad 5 is pressed. Numpad 4/6 change the eye separation
 (default 0.065, about a real eye distance if Dunia units are metres, as on Far Cry 2), numpad 8 cycles
 alternate / left only / right only.

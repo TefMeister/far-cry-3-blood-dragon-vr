@@ -2,7 +2,7 @@
 
 **The game was not launched, and nothing here has been run in the game.**
 
-`dev-archive/proxy-d3d9` (`5def297`), `d3d9.dll` `66a06df4a62d`, installed in `bin\` `[compile-verified 2026-10-08]`.
+`dev-archive/proxy-d3d9` (`a382ab9`), `d3d9.dll` `66a06df4a62d`, installed in `bin\` `[compile-verified 2026-10-08]`.
 Ported from Hard Reset's d3d9 proxy (`ensure_sbs` / `capture` / `compose` / `drop_sbs`), changed for one eye per frame.
 
 - **The frame's eye** (`stereo_frame_eye()`): read at Present BEFORE the eye flips; 0 when no player camera was
