@@ -1,6 +1,8 @@
 # Research index
 
-**Last `/gr` pass: 2026-10-11 (estate sweep) — CHECK-IN.** Inbox empty. One search for a newer Blood Dragon VR mod found only the 2017 vorpX profile. Nothing new.
+**Last `/gr` pass: 2026-10-26 (estate sweep) — CHECK-IN.** Inbox empty; watch check only: no Blood Dragon VR mod beyond the 2017 vorpX profile. Nothing new.
+
+_Previous: **Last `/gr` pass: 2026-10-11 (estate sweep) — CHECK-IN.** Inbox empty. One search for a newer Blood Dragon VR mod found only the 2017 vorpX profile. Nothing new._
 
 _Previous: **Last `/gr` pass: 2026-10-04 (estate sweep, second pass) — CHECK-IN.** Inbox empty; board `OPEN` rows read: first launch and our logger run, both FLAT. Nothing new._
 
